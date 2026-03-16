@@ -96,7 +96,10 @@ def exporter_resawod() -> dict:
                 chemin = _exporter_excel(page, export["nom"])
                 if chemin:
                     fichiers[export["nom"]] = chemin
-                    log.info(f"OK {export['nom']} — {os.path.getsize(chemin)} octets")
+                    taille = os.path.getsize(chemin)
+                    log.info(f"OK {export['nom']} — {taille} octets")
+                    # Logger la structure du fichier pour debug
+                    _logger_structure(chemin, export["nom"])
                 else:
                     log.error(f"ECHEC {export['nom']}")
             except Exception as e:
@@ -109,6 +112,23 @@ def exporter_resawod() -> dict:
         raise Exception(f"Exports manquants : {manquants}")
 
     return fichiers
+
+
+def _logger_structure(chemin: str, nom: str):
+    """Log la structure du fichier pour debug."""
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(chemin)
+        ws = wb.active
+        nb_lignes = ws.max_row
+        nb_cols = ws.max_column
+        log.info(f"  Structure {nom}: {nb_lignes} lignes x {nb_cols} colonnes")
+        # Logger TOUTES les lignes headers (0,1,2)
+        for i, row in enumerate(ws.iter_rows(values_only=True)):
+            if i > 4: break
+            log.info(f"  Ligne[{i}]: {[str(c)[:20] if c else '' for c in row]}")
+    except Exception as e:
+        log.warning(f"  Logger structure {nom}: {e}")
 
 
 def _fermer_popup(page):
