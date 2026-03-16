@@ -91,6 +91,8 @@ def exporter_resawod() -> dict:
                 time.sleep(1)
                 if export["champs"]:
                     _configurer_champs(page, export["champs"], export["nom"])
+                if export.get("filtre_date"):
+                    _configurer_filtre_date(page)
                 chemin = _exporter_excel(page, export["nom"])
                 if chemin:
                     fichiers[export["nom"]] = chemin
@@ -167,6 +169,61 @@ def _appliquer_filtre_date(page):
         time.sleep(0.5)
     except Exception as e:
         log.debug(f"filtre_date: {e}")
+
+
+def _configurer_filtre_date(page):
+    """Configure le filtre de date pour couvrir les 3 derniers mois."""
+    from datetime import datetime, timedelta
+    today = datetime.now()
+    trois_mois = today - timedelta(days=90)
+    date_debut = trois_mois.strftime("%d-%m-%Y")
+    date_fin   = today.strftime("%d-%m-%Y")
+
+    log.info(f"  Filtre date : {date_debut} → {date_fin}")
+    try:
+        page.evaluate(f"""
+            (function() {{
+                // Chercher les inputs de date dans les filtres du bas
+                var inputs = document.querySelectorAll('input[type="text"], input.form-control');
+                var dateDebut = null;
+                var dateFin = null;
+
+                for(var i=0;i<inputs.length;i++) {{
+                    var placeholder = inputs[i].placeholder || '';
+                    var val = inputs[i].value || '';
+                    // Détecter les champs de date par leur format
+                    if(val.match(/^\d{{2}}-\d{{2}}-\d{{4}}$/)) {{
+                        if(!dateDebut) {{
+                            dateDebut = inputs[i];
+                        }} else if(!dateFin) {{
+                            dateFin = inputs[i];
+                            break;
+                        }}
+                    }}
+                }}
+
+                if(dateDebut) {{
+                    dateDebut.value = '{date_debut}';
+                    dateDebut.dispatchEvent(new Event('change', {{bubbles:true}}));
+                    dateDebut.dispatchEvent(new Event('input', {{bubbles:true}}));
+                }}
+                if(dateFin) {{
+                    dateFin.value = '{date_fin}';
+                    dateFin.dispatchEvent(new Event('change', {{bubbles:true}}));
+                    dateFin.dispatchEvent(new Event('input', {{bubbles:true}}));
+                }}
+
+                // Appuyer sur Entrée pour valider le filtre
+                if(dateDebut) {{
+                    dateDebut.dispatchEvent(new KeyboardEvent('keypress', {{key:'Enter', bubbles:true}}));
+                }}
+            }})();
+        """)
+        time.sleep(2)
+        page.wait_for_load_state("networkidle")
+        time.sleep(1)
+    except Exception as e:
+        log.warning(f"  Filtre date: {e}")
 
 
 def _configurer_champs(page, champs, nom):
