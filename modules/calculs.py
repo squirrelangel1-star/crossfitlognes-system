@@ -151,7 +151,7 @@ def generer_leaderboard(fichiers: dict, top_n: int = 15) -> list:
         date_str = row[p_date] if len(row) > p_date else None
         presence = row[p_presence] if len(row) > p_presence else None
 
-        if presence != "Oui" or not idd or not date_str:
+        if presence not in ("Oui", "1", 1) or not idd or not date_str:
             continue
         if activite in ACTIVITES_EXCLUES:
             continue
@@ -292,7 +292,7 @@ def _charger_presences(fichier: str) -> dict:
         date_str = row[idx_date] if len(row) > idx_date else None
         presence = row[idx_presence] if len(row) > idx_presence else None
 
-        if presence != "Oui" or not idd or not date_str:
+        if presence not in ("Oui", "1", 1) or not idd or not date_str:
             continue
         if activite in ACTIVITES_EXCLUES:
             continue
