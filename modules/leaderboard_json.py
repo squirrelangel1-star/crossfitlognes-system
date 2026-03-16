@@ -65,8 +65,11 @@ def generer_json_leaderboard(leaderboard: list, stats: dict):
 
     # Pousser sur GitHub si token disponible
     if GITHUB_TOKEN:
-        _pousser_sur_github(json_str)
-        log.info("✅ leaderboard.json pushé sur GitHub Pages")
+        try:
+            _pousser_sur_github(json_str)
+            log.info("✅ leaderboard.json pushé sur GitHub Pages")
+        except Exception as e:
+            log.warning(f"⚠️ Push GitHub échoué : {e} — JSON sauvegardé localement")
     else:
         log.warning("⚠️ GITHUB_TOKEN non configuré — JSON sauvegardé localement uniquement")
 
