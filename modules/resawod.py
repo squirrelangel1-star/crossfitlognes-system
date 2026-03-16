@@ -39,7 +39,8 @@ PAGES = [
     {
         "nom": "presences",
         "url": f"{RESAWOD_URL}/modules/reports/activities/activities_and_users.php",
-        "champs": ["Identifiant"]
+        "champs": ["Identifiant"],
+        "filtre_date": True
     },
 ]
 
@@ -147,6 +148,27 @@ def _cocher_champ(page, champ):
     """)
 
 
+def _appliquer_filtre_date(page):
+    """Applique un filtre date pour les 3 derniers mois."""
+    from datetime import datetime, timedelta
+    today = datetime.now()
+    trois_mois = today - timedelta(days=90)
+    date_debut = trois_mois.strftime("%d-%m-%Y")
+    try:
+        page.evaluate(f"""
+            var inputs = document.querySelectorAll('input[type="date"], input.date-field, input[name*="date"]');
+            inputs.forEach(function(inp) {{
+                if(inp.placeholder && inp.placeholder.includes('début') || inp.name && inp.name.includes('start')) {{
+                    inp.value = '{date_debut}';
+                    inp.dispatchEvent(new Event('change', {{bubbles: true}}));
+                }}
+            }});
+        """)
+        time.sleep(0.5)
+    except Exception as e:
+        log.debug(f"filtre_date: {e}")
+
+
 def _configurer_champs(page, champs, nom):
     log.info(f"  Config champs {nom}...")
 
@@ -201,7 +223,7 @@ def _exporter_excel(page, nom):
 
     # Cliquer sur Exporter en Excel via JS
     try:
-        with page.expect_download(timeout=30000) as dl:
+        with page.expect_download(timeout=60000) as dl:
             page.evaluate("""
                 document.querySelectorAll('a,button,li').forEach(function(el){
                     if(el.textContent.trim()==='Exporter en Excel') el.click();
