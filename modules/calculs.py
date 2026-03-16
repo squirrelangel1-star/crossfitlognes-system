@@ -211,17 +211,33 @@ def _charger_cartes(fichier: str) -> dict:
     wb = openpyxl.load_workbook(fichier)
     ws = wb.active
     cartes = {}
+
+    # Lire les headers pour trouver les bons index
+    headers = {}
+    for i, row in enumerate(ws.iter_rows(values_only=True)):
+        if i == 0: continue
+        if i == 1:
+            for j, col in enumerate(row):
+                if col:
+                    headers[str(col).strip()] = j
+            break
+
+    idx_idd      = headers.get("Identifiant", 7)
+    idx_creneaux = headers.get("Créneaux restants", 1)
+    idx_type     = headers.get("Carte prépayée", 0)
+    idx_exp      = headers.get("Valide jusqu'à", 4)
+
     for i, row in enumerate(ws.iter_rows(values_only=True)):
         if i < 2: continue
-        idd      = row[7]
-        creneaux = row[1]
+        if len(row) <= max(idx_idd, idx_creneaux): continue
+        idd      = row[idx_idd] if len(row) > idx_idd else None
+        creneaux = row[idx_creneaux] if len(row) > idx_creneaux else 0
         if idd:
-            # Garder la carte avec le plus de crédits si plusieurs
             if idd not in cartes or (creneaux or 0) > cartes[idd].get("creneaux", 0):
                 cartes[idd] = {
-                    "type":       row[0],
+                    "type":       row[idx_type] if len(row) > idx_type else None,
                     "creneaux":   creneaux or 0,
-                    "expiration": row[4],
+                    "expiration": row[idx_exp] if len(row) > idx_exp else None,
                 }
     return cartes
 
