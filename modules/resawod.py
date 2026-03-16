@@ -54,9 +54,18 @@ def exporter_resawod() -> dict:
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage"]
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--window-size=1920,1080",
+                "--force-device-scale-factor=1",
+            ]
         )
-        context = browser.new_context(accept_downloads=True)
+        # Grande résolution pour que tous les boutons soient visibles
+        context = browser.new_context(
+            accept_downloads=True,
+            viewport={"width": 1920, "height": 1080},
+        )
         page = context.new_page()
 
         log.info("Connexion à Resawod...")
@@ -140,20 +149,31 @@ def _cocher_champ(page, champ):
 
 def _configurer_champs(page, champs, nom):
     log.info(f"  Config champs {nom}...")
-    btn = page.query_selector('button:has-text("Options")')
-    if not btn:
-        return
-    btn.hover()
+
+    # Utiliser JS pour hover et cliquer sur Champs
+    page.evaluate("""
+        var btns = document.querySelectorAll('button');
+        for(var i=0;i<btns.length;i++){
+            if(btns[i].textContent.trim()==='Options'){
+                btns[i].dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));
+                btns[i].dispatchEvent(new MouseEvent('mouseenter',{bubbles:true}));
+                break;
+            }
+        }
+    """)
     time.sleep(0.8)
+
     page.evaluate("""
         document.querySelectorAll('a,button,li').forEach(function(el){
             if(el.textContent.trim()==='Champs') el.click();
         });
     """)
     time.sleep(1)
+
     for champ in champs:
         _cocher_champ(page, champ)
         time.sleep(0.1)
+
     page.evaluate("""
         var btns=document.querySelectorAll('button');
         for(var i=0;i<btns.length;i++){
@@ -166,20 +186,27 @@ def _configurer_champs(page, champs, nom):
 
 
 def _exporter_excel(page, nom):
-    btn = page.query_selector('button:has-text("Options")')
-    if not btn:
-        return None
-    btn.hover()
+    # Utiliser JS pour déclencher le hover sur Options
+    page.evaluate("""
+        var btns = document.querySelectorAll('button');
+        for(var i=0;i<btns.length;i++){
+            if(btns[i].textContent.trim()==='Options'){
+                btns[i].dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));
+                btns[i].dispatchEvent(new MouseEvent('mouseenter',{bubbles:true}));
+                break;
+            }
+        }
+    """)
     time.sleep(0.8)
-    excel = page.query_selector('text=Exporter en Excel')
-    if not excel:
-        return None
-    box = excel.bounding_box()
-    if not box:
-        return None
+
+    # Cliquer sur Exporter en Excel via JS
     try:
         with page.expect_download(timeout=30000) as dl:
-            page.mouse.click(box['x']+box['width']/2, box['y']+box['height']/2)
+            page.evaluate("""
+                document.querySelectorAll('a,button,li').forEach(function(el){
+                    if(el.textContent.trim()==='Exporter en Excel') el.click();
+                });
+            """)
         download = dl.value
         chemin = os.path.join(DOWNLOAD_DIR, f"{nom}.xlsx")
         download.save_as(chemin)
