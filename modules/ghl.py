@@ -9,7 +9,7 @@ from datetime import datetime
 
 log = logging.getLogger(__name__)
 
-GHL_API_KEY     = os.environ["GHL_API_KEY"]
+GHL_API_KEY     = os.getenv["GHL_API_KEY"]
 GHL_LOCATION_ID = os.environ["GHL_LOCATION_ID"]
 
 BASE_URL = "https://rest.gohighlevel.com/v1"
