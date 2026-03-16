@@ -18,7 +18,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("logs/run.log")
     ]
 )
 log = logging.getLogger(__name__)
