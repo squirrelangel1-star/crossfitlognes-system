@@ -4,10 +4,9 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+    pip install -r requirements.txt && \
+    python -m playwright install chromium
 
 COPY . .
-
-RUN playwright install chromium
 
 CMD ["python", "main.py"]
