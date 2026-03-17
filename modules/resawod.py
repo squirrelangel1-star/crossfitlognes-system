@@ -166,7 +166,7 @@ def _cocher_champ(page, champ):
 
 
 def _configurer_filtre_date(page):
-    """Ouvre la popup calendrier et clique Cette année — avec force=True."""
+    """Ouvre la popup calendrier, clique Cette année puis Rafraîchir."""
     log.info("  Filtre date : Cette année...")
     try:
         page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -207,7 +207,7 @@ def _configurer_filtre_date(page):
         log.info(f"  Cette année: {clique}")
         time.sleep(1)
 
-        # Vérifier si le bouton Accepter est visible
+        # Vérifier Accepter
         accepter_visible = page.evaluate("""
             (function() {
                 var btns = document.querySelectorAll('button');
@@ -228,10 +228,26 @@ def _configurer_filtre_date(page):
                 });
             """)
             log.info("  Accepter cliqué ✅")
+            time.sleep(2)
 
+        # Cliquer Rafraîchir pour recharger le tableau
+        time.sleep(1)
+        rafraichir = page.evaluate("""
+            (function() {
+                var all = document.querySelectorAll('button,a,input[type="button"],input[type="submit"]');
+                for(var i=0;i<all.length;i++) {
+                    if(all[i].textContent.trim() === 'Rafraîchir') {
+                        all[i].click();
+                        return 'cliqué';
+                    }
+                }
+                return 'non_trouvé';
+            })()
+        """)
+        log.info(f"  Rafraîchir: {rafraichir}")
         time.sleep(5)
         page.wait_for_load_state("networkidle")
-        time.sleep(5)
+        time.sleep(3)
 
         # Vérifier les dates
         vals = page.evaluate("""
