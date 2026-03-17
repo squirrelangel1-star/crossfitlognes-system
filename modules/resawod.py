@@ -205,14 +205,30 @@ def _configurer_filtre_date(page):
             })()
         """)
         log.info(f"  Cette année: {clique}")
-        time.sleep(0.5)
+        time.sleep(1)
 
-        # Cliquer Accepter
-        page.evaluate("""
-            document.querySelectorAll('button').forEach(function(btn) {
-                if(btn.textContent.trim() === 'Accepter') btn.click();
-            });
+        # Vérifier si le bouton Accepter est visible
+        accepter_visible = page.evaluate("""
+            (function() {
+                var btns = document.querySelectorAll('button');
+                for(var i=0;i<btns.length;i++) {
+                    if(btns[i].textContent.trim() === 'Accepter' && btns[i].offsetParent !== null)
+                        return true;
+                }
+                return false;
+            })()
         """)
+        log.info(f"  Bouton Accepter visible: {accepter_visible}")
+
+        if accepter_visible:
+            page.evaluate("""
+                document.querySelectorAll('button').forEach(function(btn) {
+                    if(btn.textContent.trim() === 'Accepter' && btn.offsetParent !== null)
+                        btn.click();
+                });
+            """)
+            log.info("  Accepter cliqué ✅")
+
         time.sleep(5)
         page.wait_for_load_state("networkidle")
         time.sleep(5)
