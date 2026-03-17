@@ -88,6 +88,11 @@ def exporter_resawod() -> dict:
                 time.sleep(1)
                 if export["champs"]:
                     _configurer_champs(page, export["champs"], export["nom"])
+                    # Attendre le rechargement du tableau après config champs
+                    if export["nom"] == "presences":
+                        log.info("  Attente rechargement tableau présences...")
+                        page.wait_for_load_state("networkidle")
+                        time.sleep(5)
                 chemin = _exporter_excel(page, export["nom"])
                 if chemin:
                     fichiers[export["nom"]] = chemin
