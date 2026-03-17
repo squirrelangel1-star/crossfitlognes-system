@@ -1,6 +1,5 @@
 """
 Module Resawod — Export automatique via Playwright
-Validé le 16/03/2026 — 4/4 exports fonctionnels
 """
 
 import os
@@ -62,7 +61,6 @@ def exporter_resawod() -> dict:
                 "--force-device-scale-factor=1",
             ]
         )
-        # Grande résolution pour que tous les boutons soient visibles
         context = browser.new_context(
             accept_downloads=True,
             viewport={"width": 1920, "height": 1080},
@@ -98,7 +96,6 @@ def exporter_resawod() -> dict:
                     fichiers[export["nom"]] = chemin
                     taille = os.path.getsize(chemin)
                     log.info(f"OK {export['nom']} — {taille} octets")
-                    # Logger la structure du fichier pour debug
                     _logger_structure(chemin, export["nom"])
                 else:
                     log.error(f"ECHEC {export['nom']}")
@@ -115,15 +112,11 @@ def exporter_resawod() -> dict:
 
 
 def _logger_structure(chemin: str, nom: str):
-    """Log la structure du fichier pour debug."""
     try:
         import openpyxl
         wb = openpyxl.load_workbook(chemin)
         ws = wb.active
-        nb_lignes = ws.max_row
-        nb_cols = ws.max_column
-        log.info(f"  Structure {nom}: {nb_lignes} lignes x {nb_cols} colonnes")
-        # Logger TOUTES les lignes headers (0,1,2)
+        log.info(f"  Structure {nom}: {ws.max_row} lignes x {ws.max_column} colonnes")
         for i, row in enumerate(ws.iter_rows(values_only=True)):
             if i > 4: break
             log.info(f"  Ligne[{i}]: {[str(c)[:20] if c else '' for c in row]}")
@@ -170,86 +163,98 @@ def _cocher_champ(page, champ):
     """)
 
 
-def _appliquer_filtre_date(page):
-    """Applique un filtre date pour les 3 derniers mois."""
-    from datetime import datetime, timedelta
-    today = datetime.now()
-    trois_mois = today - timedelta(days=90)
-    date_debut = trois_mois.strftime("%d-%m-%Y")
-    try:
-        page.evaluate(f"""
-            var inputs = document.querySelectorAll('input[type="date"], input.date-field, input[name*="date"]');
-            inputs.forEach(function(inp) {{
-                if(inp.placeholder && inp.placeholder.includes('début') || inp.name && inp.name.includes('start')) {{
-                    inp.value = '{date_debut}';
-                    inp.dispatchEvent(new Event('change', {{bubbles: true}}));
-                }}
-            }});
-        """)
-        time.sleep(0.5)
-    except Exception as e:
-        log.debug(f"filtre_date: {e}")
-
-
 def _configurer_filtre_date(page):
-    """Configure le filtre de date pour couvrir les 3 derniers mois."""
-    from datetime import datetime, timedelta
+    """
+    Configure le filtre date via le setter natif JavaScript.
+    Modifie directement les inputs sans ouvrir la popup calendrier.
+    """
+    from datetime import datetime
     today = datetime.now()
-    trois_mois = today - timedelta(days=90)
-    date_debut = trois_mois.strftime("%d-%m-%Y")
+    date_debut = f"01-01-{today.year}"
     date_fin   = today.strftime("%d-%m-%Y")
-
     log.info(f"  Filtre date : {date_debut} → {date_fin}")
     try:
-        page.evaluate(f"""
-            (function() {{
-                // Chercher les inputs de date dans les filtres du bas
-                var inputs = document.querySelectorAll('input[type="text"], input.form-control');
-                var dateDebut = null;
-                var dateFin = null;
+        # Scroll en bas pour charger les filtres
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        time.sleep(1)
 
-                for(var i=0;i<inputs.length;i++) {{
-                    var placeholder = inputs[i].placeholder || '';
-                    var val = inputs[i].value || '';
-                    // Détecter les champs de date par leur format
-                    if(val.match(/^\d{{2}}-\d{{2}}-\d{{4}}$/)) {{
-                        if(!dateDebut) {{
-                            dateDebut = inputs[i];
-                        }} else if(!dateFin) {{
-                            dateFin = inputs[i];
-                            break;
+        # Trouver les inputs de date
+        inputs_dates = page.evaluate("""
+            (function() {
+                var result = [];
+                var inputs = document.querySelectorAll('input');
+                for(var i=0;i<inputs.length;i++) {
+                    var val = (inputs[i].value || '').trim();
+                    if(val.match(/^\d{2}-\d{2}-\d{4}$/)) {
+                        result.push({index: i, value: val});
+                    }
+                }
+                return result;
+            })()
+        """)
+        log.info(f"  Inputs date trouvés: {inputs_dates}")
+
+        if len(inputs_dates) >= 2:
+            # Modifier via le setter natif (contourne React/Vue)
+            page.evaluate(f"""
+                (function() {{
+                    var inputs = document.querySelectorAll('input');
+                    var dateInputs = [];
+                    for(var i=0;i<inputs.length;i++) {{
+                        var val = (inputs[i].value || '').trim();
+                        if(val.match(/^\d{{2}}-\d{{2}}-\d{{4}}$/)) {{
+                            dateInputs.push(inputs[i]);
                         }}
                     }}
-                }}
+                    if(dateInputs.length >= 2) {{
+                        var setter = Object.getOwnPropertyDescriptor(
+                            window.HTMLInputElement.prototype, 'value').set;
+                        setter.call(dateInputs[0], '{date_debut}');
+                        dateInputs[0].dispatchEvent(new Event('input', {{bubbles:true}}));
+                        dateInputs[0].dispatchEvent(new Event('change', {{bubbles:true}}));
+                        setter.call(dateInputs[1], '{date_fin}');
+                        dateInputs[1].dispatchEvent(new Event('input', {{bubbles:true}}));
+                        dateInputs[1].dispatchEvent(new Event('change', {{bubbles:true}}));
+                    }}
+                }})();
+            """)
+            time.sleep(1)
+            page.keyboard.press("Enter")
+            time.sleep(2)
+            page.wait_for_load_state("networkidle")
+            time.sleep(2)
 
-                if(dateDebut) {{
-                    dateDebut.value = '{date_debut}';
-                    dateDebut.dispatchEvent(new Event('change', {{bubbles:true}}));
-                    dateDebut.dispatchEvent(new Event('input', {{bubbles:true}}));
-                }}
-                if(dateFin) {{
-                    dateFin.value = '{date_fin}';
-                    dateFin.dispatchEvent(new Event('change', {{bubbles:true}}));
-                    dateFin.dispatchEvent(new Event('input', {{bubbles:true}}));
-                }}
+            # Cliquer Rafraîchir si présent
+            page.evaluate("""
+                document.querySelectorAll('button,a').forEach(function(el) {
+                    if(el.textContent.trim() === 'Rafraîchir') el.click();
+                });
+            """)
+            time.sleep(2)
+            page.wait_for_load_state("networkidle")
+            time.sleep(1)
 
-                // Appuyer sur Entrée pour valider le filtre
-                if(dateDebut) {{
-                    dateDebut.dispatchEvent(new KeyboardEvent('keypress', {{key:'Enter', bubbles:true}}));
-                }}
-            }})();
-        """)
-        time.sleep(2)
-        page.wait_for_load_state("networkidle")
-        time.sleep(1)
+            # Vérifier les dates
+            vals = page.evaluate("""
+                (function() {
+                    var vals = [];
+                    document.querySelectorAll('input').forEach(function(inp) {
+                        var v = (inp.value||'').trim();
+                        if(v.match(/^\d{2}-\d{2}-\d{4}$/)) vals.push(v);
+                    });
+                    return vals;
+                })()
+            """)
+            log.info(f"  Dates après filtre: {vals}")
+        else:
+            log.warning(f"  Pas assez d'inputs date: {len(inputs_dates)}")
+
     except Exception as e:
-        log.warning(f"  Filtre date: {e}")
+        log.warning(f"  Filtre date erreur: {e}")
 
 
 def _configurer_champs(page, champs, nom):
     log.info(f"  Config champs {nom}...")
-
-    # Utiliser JS pour hover et cliquer sur Champs
     page.evaluate("""
         var btns = document.querySelectorAll('button');
         for(var i=0;i<btns.length;i++){
@@ -285,7 +290,6 @@ def _configurer_champs(page, champs, nom):
 
 
 def _exporter_excel(page, nom):
-    # Utiliser JS pour déclencher le hover sur Options
     page.evaluate("""
         var btns = document.querySelectorAll('button');
         for(var i=0;i<btns.length;i++){
@@ -298,7 +302,6 @@ def _exporter_excel(page, nom):
     """)
     time.sleep(0.8)
 
-    # Cliquer sur Exporter en Excel via JS
     try:
         with page.expect_download(timeout=60000) as dl:
             page.evaluate("""
