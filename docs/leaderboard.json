@@ -1,15 +1,121 @@
 {
-  "mis_a_jour": "17/03/2026 à 12:55",
+  "mis_a_jour": "17/03/2026 à 13:02",
   "mois": "March 2026",
   "mois_code": "2026-03",
   "stats_globales": {
     "membres_actifs": 265,
-    "seances_du_mois": 0,
+    "seances_du_mois": 31,
     "absents_7j": 0,
     "absents_14j": 0,
     "absents_21j": 265
   },
-  "leaderboard": [],
+  "leaderboard": [
+    {
+      "rang": 1,
+      "prenom": "Maud",
+      "initiale": "H.",
+      "seances": 2,
+      "progression": 2
+    },
+    {
+      "rang": 2,
+      "prenom": "Thomas",
+      "initiale": "A.",
+      "seances": 2,
+      "progression": 2
+    },
+    {
+      "rang": 3,
+      "prenom": "Solene",
+      "initiale": "C.",
+      "seances": 2,
+      "progression": 2
+    },
+    {
+      "rang": 4,
+      "prenom": "Vivian",
+      "initiale": "T.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 5,
+      "prenom": "Lily-lou",
+      "initiale": "G.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 6,
+      "prenom": "Justine",
+      "initiale": "T.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 7,
+      "prenom": "Chloé",
+      "initiale": "G.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 8,
+      "prenom": "Pauline",
+      "initiale": "M.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 9,
+      "prenom": "Steven",
+      "initiale": "C.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 10,
+      "prenom": "Anthony",
+      "initiale": "L.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 11,
+      "prenom": "Stéphanie",
+      "initiale": "B.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 12,
+      "prenom": "Laina",
+      "initiale": "T.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 13,
+      "prenom": "Sourivong",
+      "initiale": "S.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 14,
+      "prenom": "Gaëlle",
+      "initiale": "G.",
+      "seances": 1,
+      "progression": 1
+    },
+    {
+      "rang": 15,
+      "prenom": "Alexandre",
+      "initiale": "B.",
+      "seances": 1,
+      "progression": 1
+    }
+  ],
   "challenges": {
     "challenge_12_seances": {
       "nom": "12 séances",
