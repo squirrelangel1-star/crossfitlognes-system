@@ -1,5 +1,5 @@
 """
-CrossFit CLC — Système automatisé de fidélisation
+CrossFit CLC — Système automatisé de fidélisation v2
 Script principal — tourne chaque nuit sur Railway.app
 """
 
