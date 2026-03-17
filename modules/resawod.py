@@ -89,9 +89,8 @@ def exporter_resawod() -> dict:
                 if export["champs"]:
                     _configurer_champs(page, export["champs"], export["nom"])
                 if export["nom"] == "presences":
-                    log.info("  Attente rechargement tableau présences...")
                     page.wait_for_load_state("networkidle")
-                    time.sleep(3)
+                    time.sleep(2)
                     _configurer_filtre_date(page)
                 chemin = _exporter_excel(page, export["nom"])
                 if chemin:
@@ -166,85 +165,72 @@ def _cocher_champ(page, champ):
 
 
 def _configurer_filtre_date(page):
-    """Ouvre la popup calendrier, clique Cette année puis Rafraîchir."""
-    log.info("  Filtre date : Cette année...")
+    """
+    Remplit les inputs Du:/Destinataire: de la popup via leur placeholder
+    puis clique Rafraîchir dans la popup pour recharger le tableau.
+    """
+    from datetime import datetime
+    today = datetime.now()
+    date_debut = f"01-01-{today.year}"
+    date_fin   = today.strftime("%d-%m-%Y")
+    log.info(f"  Filtre date : {date_debut} → {date_fin}")
     try:
-        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        time.sleep(1)
-
-        # Cliquer sur le premier input de date avec force=True
-        inputs = page.locator('input').all()
-        clique_input = False
-        for inp in inputs:
-            try:
-                val = inp.input_value()
-                if val and len(val) == 10 and val[2] == '-' and val[5] == '-':
-                    inp.click(force=True)
-                    log.info(f"  Input date cliqué (force): {val}")
-                    clique_input = True
-                    break
-            except: pass
-
-        if not clique_input:
-            log.warning("  Aucun input date trouvé")
-            return
-
-        time.sleep(2)
-
-        # Cliquer Cette année
-        clique = page.evaluate("""
-            (function() {
-                var all = document.querySelectorAll('*');
-                for(var i=0;i<all.length;i++) {
-                    if(all[i].textContent.trim() === 'Cette année') {
-                        all[i].click();
-                        return 'ok:' + all[i].tagName + '.' + all[i].className;
-                    }
-                }
-                return 'non_trouve';
-            })()
+        # Remplir directement les inputs Du:/Destinataire: via leur placeholder
+        resultat = page.evaluate(f"""
+            (function() {{
+                var inputs = document.querySelectorAll('input');
+                var debut = null, fin = null;
+                for(var i=0;i<inputs.length;i++) {{
+                    var p = inputs[i].placeholder || '';
+                    if(p === 'Début du temps' && !debut) debut = {{el: inputs[i], idx: i}};
+                    if(p === 'Fin de notre journée' && !fin) fin = {{el: inputs[i], idx: i}};
+                }}
+                if(debut && fin) {{
+                    debut.el.value = '{date_debut}';
+                    debut.el.dispatchEvent(new Event('input', {{bubbles:true}}));
+                    debut.el.dispatchEvent(new Event('change', {{bubbles:true}}));
+                    fin.el.value = '{date_fin}';
+                    fin.el.dispatchEvent(new Event('input', {{bubbles:true}}));
+                    fin.el.dispatchEvent(new Event('change', {{bubbles:true}}));
+                    return 'ok: debut[' + debut.idx + ']=' + debut.el.value + ' fin[' + fin.idx + ']=' + fin.el.value;
+                }}
+                return 'inputs non trouvés';
+            }})()
         """)
-        log.info(f"  Cette année: {clique}")
-        time.sleep(1)
+        log.info(f"  Inputs remplis: {resultat}")
+        time.sleep(0.5)
 
-        # Vérifier Accepter
-        accepter_visible = page.evaluate("""
-            (function() {
-                var btns = document.querySelectorAll('button');
-                for(var i=0;i<btns.length;i++) {
-                    if(btns[i].textContent.trim() === 'Accepter' && btns[i].offsetParent !== null)
-                        return true;
-                }
-                return false;
-            })()
-        """)
-        log.info(f"  Bouton Accepter visible: {accepter_visible}")
-
-        if accepter_visible:
-            page.evaluate("""
-                document.querySelectorAll('button').forEach(function(btn) {
-                    if(btn.textContent.trim() === 'Accepter' && btn.offsetParent !== null)
-                        btn.click();
-                });
-            """)
-            log.info("  Accepter cliqué ✅")
-            time.sleep(2)
-
-        # Cliquer Rafraîchir pour recharger le tableau
-        time.sleep(1)
+        # Cliquer Rafraîchir dans la popup (class hasDatepicker ou dans le contexte popup)
         rafraichir = page.evaluate("""
             (function() {
-                var all = document.querySelectorAll('button,a,input[type="button"],input[type="submit"]');
-                for(var i=0;i<all.length;i++) {
-                    if(all[i].textContent.trim() === 'Rafraîchir') {
-                        all[i].click();
-                        return 'cliqué';
+                var btns = document.querySelectorAll('button, input[type="button"], input[type="submit"], a');
+                for(var i=0;i<btns.length;i++) {
+                    var t = btns[i].textContent.trim() || btns[i].value || '';
+                    if(t === 'Rafraîchir') {
+                        btns[i].click();
+                        return 'cliqué[' + i + ']:' + btns[i].tagName + '.' + btns[i].className;
                     }
                 }
                 return 'non_trouvé';
             })()
         """)
         log.info(f"  Rafraîchir: {rafraichir}")
+        time.sleep(2)
+
+        # Cliquer Accepter
+        accepter = page.evaluate("""
+            (function() {
+                var btns = document.querySelectorAll('button');
+                for(var i=0;i<btns.length;i++) {
+                    if(btns[i].textContent.trim() === 'Accepter' && btns[i].offsetParent !== null) {
+                        btns[i].click();
+                        return 'cliqué';
+                    }
+                }
+                return 'non_trouvé';
+            })()
+        """)
+        log.info(f"  Accepter: {accepter}")
         time.sleep(5)
         page.wait_for_load_state("networkidle")
         time.sleep(3)
@@ -257,7 +243,7 @@ def _configurer_filtre_date(page):
                     var v = (inp.value||'').trim();
                     if(v.match(/^\d{2}-\d{2}-\d{4}$/)) vals.push(v);
                 });
-                return vals;
+                return [...new Set(vals)];
             })()
         """)
         log.info(f"  Dates après filtre: {vals}")
