@@ -88,11 +88,11 @@ def exporter_resawod() -> dict:
                 time.sleep(1)
                 if export["champs"]:
                     _configurer_champs(page, export["champs"], export["nom"])
-                    # Attendre le rechargement du tableau après config champs
-                    if export["nom"] == "presences":
-                        log.info("  Attente rechargement tableau présences...")
-                        page.wait_for_load_state("networkidle")
-                        time.sleep(5)
+                if export["nom"] == "presences":
+                    log.info("  Attente rechargement tableau présences...")
+                    page.wait_for_load_state("networkidle")
+                    time.sleep(3)
+                    _configurer_filtre_date(page)
                 chemin = _exporter_excel(page, export["nom"])
                 if chemin:
                     fichiers[export["nom"]] = chemin
@@ -163,6 +163,75 @@ def _cocher_champ(page, champ):
             return 'non_trouve';
         }})()
     """)
+
+
+def _configurer_filtre_date(page):
+    """Ouvre la popup calendrier et clique Cette année — avec force=True."""
+    log.info("  Filtre date : Cette année...")
+    try:
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        time.sleep(1)
+
+        # Cliquer sur le premier input de date avec force=True
+        inputs = page.locator('input').all()
+        clique_input = False
+        for inp in inputs:
+            try:
+                val = inp.input_value()
+                if val and len(val) == 10 and val[2] == '-' and val[5] == '-':
+                    inp.click(force=True)
+                    log.info(f"  Input date cliqué (force): {val}")
+                    clique_input = True
+                    break
+            except: pass
+
+        if not clique_input:
+            log.warning("  Aucun input date trouvé")
+            return
+
+        time.sleep(2)
+
+        # Cliquer Cette année
+        clique = page.evaluate("""
+            (function() {
+                var all = document.querySelectorAll('*');
+                for(var i=0;i<all.length;i++) {
+                    if(all[i].textContent.trim() === 'Cette année') {
+                        all[i].click();
+                        return 'ok:' + all[i].tagName + '.' + all[i].className;
+                    }
+                }
+                return 'non_trouve';
+            })()
+        """)
+        log.info(f"  Cette année: {clique}")
+        time.sleep(0.5)
+
+        # Cliquer Accepter
+        page.evaluate("""
+            document.querySelectorAll('button').forEach(function(btn) {
+                if(btn.textContent.trim() === 'Accepter') btn.click();
+            });
+        """)
+        time.sleep(3)
+        page.wait_for_load_state("networkidle")
+        time.sleep(2)
+
+        # Vérifier les dates
+        vals = page.evaluate("""
+            (function() {
+                var vals = [];
+                document.querySelectorAll('input').forEach(function(inp) {
+                    var v = (inp.value||'').trim();
+                    if(v.match(/^\d{2}-\d{2}-\d{4}$/)) vals.push(v);
+                });
+                return vals;
+            })()
+        """)
+        log.info(f"  Dates après filtre: {vals}")
+
+    except Exception as e:
+        log.warning(f"  Filtre date erreur: {e}")
 
 
 def _configurer_champs(page, champs, nom):
