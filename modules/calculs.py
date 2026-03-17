@@ -277,7 +277,7 @@ def _charger_presences(fichier: str) -> dict:
             break
 
     idx_idd      = headers.get("Identifiant", 1)
-    idx_activite = headers.get("Activité / Catégorie", 4)
+    idx_activite = headers.get("Activité", headers.get("Activité / Catégorie", 4))
     idx_date     = headers.get("Date", 5)
     idx_presence = headers.get("Présence", 13)
 
