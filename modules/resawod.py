@@ -213,9 +213,9 @@ def _configurer_filtre_date(page):
                 if(btn.textContent.trim() === 'Accepter') btn.click();
             });
         """)
-        time.sleep(3)
+        time.sleep(5)
         page.wait_for_load_state("networkidle")
-        time.sleep(2)
+        time.sleep(5)
 
         # Vérifier les dates
         vals = page.evaluate("""
